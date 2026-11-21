@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>برنامج الغياب - مدرسة كفر المنصورة الإعدادية بنين</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f1f5f9;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .swipe-switch {
+            position: relative;
+            width: 78px;
+            height: 38px;
+            border-radius: 9999px;
+            background-color: #cbd5e1;
+            transition: background-color 0.25s ease;
+            cursor: pointer;
+            touch-action: pan-y;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.12);
+            flex-shrink: 0;
+        }
+        .swipe-switch.absent {
+            background-color: #dc2626;
+        }
+        .swipe-knob {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .swipe-switch.absent .swipe-knob {
+            transform: translateX(-40px);
+        }
+        .switch-label-present {
+            position: absolute;
+            left: 9px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            font-weight: 800;
+            color: #475569;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .switch-label-absent {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 11px;
+            font-weight: 800;
+            color: #ffffff;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .swipe-switch.absent .switch-label-present {
+            opacity: 0;
+        }
+        .swipe-switch.absent .switch-label-absent {
+            opacity: 1;
+        }
+        .screen-fade {
+            animation: fadeIn 0.25s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <div id="app-container" class="w-full max-w-lg mx-auto bg-white min-h-screen shadow-xl flex flex-col relative overflow-x-hidden">
+
+        <!-- 1. الشاشة الرئيسية -->
+        <section id="screen-home" class="screen-fade flex-1 flex flex-col justify-between p-6 bg-gradient-to-b from-blue-900 via-blue-800 to-slate-900 text-white">
+            <div class="text-center mt-5">
+                <div class="w-20 h-20 mx-auto bg-white/15 backdrop-blur-md rounded-3xl flex items-center justify-center mb-4 border border-white/20 shadow-lg">
+                    <svg class="w-12 h-12 text-amber-300" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 14v7" />
+                    </svg>
+                </div>
+
+                <h1 class="text-3xl sm:text-4xl font-black text-amber-300 tracking-wide drop-shadow-md leading-snug mb-3">
+                    مرحبا بكم كتير خالص!!!
+                </h1>
+
+                <div class="inline-block bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-5 py-2.5 mt-1">
+                    <h2 class="text-lg sm:text-xl font-bold text-white">
+                        مدرسة كفر المنصورة الإعدادية بنين
+                    </h2>
+                </div>
+
+                <div id="sync-status-badge" class="mt-3 inline-flex items-center gap-2 bg-slate-900/60 border border-white/15 px-3.5 py-1.5 rounded-full text-xs font-bold text-amber-300">
+                    <span id="sync-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span id="sync-text">جارٍ الاتصال والمزامنة السحابية...</span>
+                </div>
+            </div>
+
+            <div class="my-5 space-y-3.5">
+                <p class="text-center text-blue-100 text-sm font-bold mb-1">اختر الصف الدراسي للمتابعة:</p>
+
+                <button onclick="openGrade(1)" class="w-full bg-white hover:bg-blue-50 active:scale-[0.98] text-blue-950 rounded-2xl p-4 shadow-xl flex items-center justify-between transition-all border-b-4 border-blue-300">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-800 flex items-center justify-center font-black text-2xl">١</div>
+                        <div class="text-right">
+                            <span class="block text-xl font-black text-blue-950">الصف الأول</span>
+                            <span class="text-xs font-semibold text-slate-500">الفصول من ( ١ - ١ ) حتى ( ١ - ٨ )</span>
+                        </div>
+                    </div>
+                    <svg class="w-7 h-7 text-blue-700" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+
+                <button onclick="openGrade(2)" class="w-full bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white rounded-2xl p-4 shadow-xl flex items-center justify-between transition-all border-b-4 border-emerald-700">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center font-black text-2xl">٢</div>
+                        <div class="text-right">
+                            <span class="block text-xl font-black">الصف الثاني</span>
+                            <span class="text-xs font-semibold text-emerald-100">الفصول من ( ٢ - ١ ) حتى ( ٢ - ٨ )</span>
+                        </div>
+                    </div>
+                    <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+
+                <button onclick="openAdminDashboard()" class="w-full bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-slate-950 rounded-2xl p-4 shadow-xl flex items-center justify-between transition-all border-b-4 border-amber-600">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-slate-900/10 text-slate-900 flex items-center justify-center">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-lg font-black">لوحة متابعة الإدارة والتقارير الشاملة</span>
+                            <span class="text-xs font-bold text-slate-800">متابعة غياب جميع الفصول وتصدير شامل</span>
+                        </div>
+                    </div>
+                    <svg class="w-6 h-6 text-slate-900" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="pb-3">
+                <button onclick="openShareModal()" class="w-full bg-white/10 hover:bg-white/20 active:scale-[0.98] text-white border border-white/25 rounded-2xl py-3 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-all">
+                    <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    <span>مشاركة الرابط للمعلمين</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. شاشة اختيار الفصول -->
+        <section id="screen-classes" class="hidden screen-fade flex-1 flex flex-col bg-slate-50">
+            <header class="bg-blue-900 text-white p-4 sticky top-0 z-20 shadow-md flex items-center justify-between">
+                <button onclick="goHome()" class="bg-white/15 hover:bg-white/25 active:scale-95 px-3.5 py-2 rounded-xl flex items-center gap-1.5 text-sm font-bold transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span>الرئيسية</span>
+                </button>
+                <div class="text-center">
+                    <h2 id="grade-title" class="text-lg font-black text-amber-300">فصول الصف الأول</h2>
+                    <p class="text-[11px] text-blue-200">مدرسة كفر المنصورة الإعدادية بنين</p>
+                </div>
+                <div class="w-16"></div>
+            </header>
+
+            <div class="p-4 flex-1">
+                <div class="bg-blue-50 border border-blue-200 rounded-2xl p-3 mb-4 flex items-center gap-3 text-blue-900 text-sm font-bold">
+                    <svg class="w-6 h-6 text-blue-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <span>اختر الفصل لفتح كشف أسماء الطلاب وتسجيل الغياب:</span>
+                </div>
+
+                <div id="classes-list" class="space-y-3 pb-6"></div>
+            </div>
+        </section>
+
+        <!-- 3. شاشة تسجيل الغياب داخل الفصل -->
+        <section id="screen-attendance" class="hidden screen-fade flex-1 flex flex-col bg-slate-100">
+            <header class="bg-blue-900 text-white p-4 sticky top-0 z-30 shadow-md">
+                <div class="flex items-center justify-between mb-3">
+                    <button onclick="backToClasses()" class="bg-white/15 hover:bg-white/25 active:scale-95 px-3 py-2 rounded-xl flex items-center gap-1 text-sm font-bold transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span>الفصول</span>
+                    </button>
+
+                    <div class="text-center">
+                        <span class="text-xs text-blue-200 block">كشف غياب فصل</span>
+                        <h2 id="current-class-title" class="text-2xl font-black text-amber-300 tracking-wider">١ - ١</h2>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="openResetModal()" title="إعادة ضبط القوائم الأصلية" class="bg-amber-500/20 hover:bg-amber-500/35 text-amber-200 border border-amber-300/30 p-2 rounded-xl transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                        </button>
+                        <button onclick="openAddStudentModal()" class="bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-white px-2.5 py-2 rounded-xl flex items-center gap-1 text-xs font-extrabold shadow transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            <span>إضافة طالب</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-blue-950/60 p-3 rounded-2xl border border-white/15">
+                    <div>
+                        <label for="attendance-date" class="block text-[11px] font-bold text-blue-200 mb-1 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span>تاريخ اليوم:</span>
+                        </label>
+                        <input type="date" id="attendance-date" onchange="handleDateChange()" class="w-full bg-white text-slate-900 font-bold text-sm rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-blue-200 mb-1 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>اسم المعلم المسؤول:</span>
+                        </label>
+                        <button onclick="openTeacherModal()" id="teacher-btn" class="w-full bg-white hover:bg-amber-50 text-slate-900 font-bold text-sm rounded-xl px-3 py-2 flex items-center justify-between transition text-right">
+                            <span id="teacher-name-display" class="truncate text-blue-900">اضغط لتسجيل اسم المعلم</span>
+                            <svg class="w-4 h-4 text-slate-400 shrink-0 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="bg-white border-b border-slate-200 px-4 py-2.5 flex items-center justify-between text-xs font-bold shadow-sm">
+                <div class="flex items-center gap-1.5 text-slate-600">
+                    <span>المسجلون:</span>
+                    <span id="stat-total" class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded-lg font-black">0 / 60</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-emerald-700">
+                    <span>حضور اليوم:</span>
+                    <span id="stat-present" class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg font-black">0</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-red-600">
+                    <span>غياب اليوم:</span>
+                    <span id="stat-absent" class="bg-red-50 text-red-600 px-2 py-0.5 rounded-lg font-black">0</span>
+                </div>
+            </div>
+
+            <div class="px-4 pt-3 pb-1">
+                <div class="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs text-amber-900 font-semibold flex items-center gap-2">
+                    <span class="text-base">👈</span>
+                    <span>اضغط على الزر أو اسحبه من <b>اليمين إلى اليسار</b> لتسجيل غياب الطالب وزيادة عداد غيابه.</span>
+                </div>
+            </div>
+
+            <div id="students-list" class="p-4 space-y-2.5 flex-1 pb-44"></div>
+
+            <div class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-[0_-4px_15px_rgba(0,0,0,0.08)] z-30">
+                <div class="grid grid-cols-2 gap-2.5 mb-2">
+                    <button onclick="saveAttendanceData()" class="bg-blue-800 hover:bg-blue-700 active:scale-[0.98] text-white font-extrabold py-3 px-3 rounded-xl shadow flex items-center justify-center gap-2 text-sm transition">
+                        <svg class="w-5 h-5 text-amber-300" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>حفظ ومزامنة</span>
+                    </button>
+
+                    <button onclick="openExportModal()" class="bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-extrabold py-3 px-3 rounded-xl shadow flex items-center justify-center gap-2 text-sm transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>تصدير إلى إكسيل</span>
+                    </button>
+                </div>
+
+                <button onclick="openShareModal()" class="w-full bg-slate-100 hover:bg-slate-200 active:scale-[0.99] text-slate-700 font-bold py-2 px-3 rounded-xl flex items-center justify-center gap-2 text-xs transition border border-slate-300">
+                    <svg class="w-4 h-4 text-blue-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <span>مشاركة الرابط للمعلمين</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 4. شاشة لوحة الإدارة والتقارير المباشرة -->
+        <section id="screen-admin" class="hidden screen-fade flex-1 flex flex-col bg-slate-50">
+            <header class="bg-slate-900 text-white p-4 sticky top-0 z-20 shadow-md">
+                <div class="flex items-center justify-between mb-3">
+                    <button onclick="goHome()" class="bg-white/15 hover:bg-white/25 active:scale-95 px-3 py-2 rounded-xl flex items-center gap-1 text-sm font-bold transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span>الرئيسية</span>
+                    </button>
+                    <div class="text-center">
+                        <h2 class="text-lg font-black text-amber-300">متابعة الإدارة المباشرة</h2>
+                        <p class="text-[11px] text-slate-300">ملخص الغياب الفوري لجميع فصول المدرسة</p>
+                    </div>
+                    <div class="w-16"></div>
+                </div>
+
+                <div class="bg-white/10 p-2.5 rounded-2xl border border-white/15 flex items-center justify-between gap-3">
+                    <label for="admin-date" class="text-xs font-bold text-amber-300 shrink-0">تاريخ المتابعة:</label>
+                    <input type="date" id="admin-date" onchange="handleAdminDateChange()" class="bg-white text-slate-900 font-bold text-sm rounded-xl px-3 py-1.5 focus:outline-none">
+                </div>
+            </header>
+
+            <div class="p-4 pb-28 space-y-4">
+                <div class="grid grid-cols-2 gap-2.5">
+                    <div class="bg-white p-3 rounded-2xl border border-slate-200 text-center shadow-xs">
+                        <span class="block text-[11px] font-bold text-slate-500">إجمالي الطلبة</span>
+                        <strong id="admin-total-students" class="text-xl font-black text-blue-950">0</strong>
+                    </div>
+                    <div class="bg-red-50 p-3 rounded-2xl border border-red-200 text-center shadow-xs">
+                        <span class="block text-[11px] font-bold text-red-700">إجمالي الغائبين</span>
+                        <strong id="admin-total-absent" class="text-xl font-black text-red-700">0</strong>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded-2xl border border-blue-200 text-center shadow-xs">
+                        <span class="block text-[11px] font-bold text-blue-800">إجمالي الغائبين للصف الأول</span>
+                        <strong id="admin-g1-absent" class="text-xl font-black text-blue-900">0</strong>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-center shadow-xs">
+                        <span class="block text-[11px] font-bold text-emerald-800">إجمالي الغائبين للصف الثاني</span>
+                        <strong id="admin-g2-absent" class="text-xl font-black text-emerald-900">0</strong>
+                    </div>
+                </div>
+
+                <div id="admin-classes-summary" class="space-y-2.5"></div>
+            </div>
+
+            <div class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 shadow-lg z-30">
+                <button onclick="exportSchoolExcel()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-extrabold py-3.5 px-4 rounded-2xl shadow flex items-center justify-center gap-2 text-sm transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>تصدير تقرير غياب المدرسة بالكامل (Excel)</span>
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- النوافذ المنبثقة -->
+    <div id="modal-teacher" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl screen-fade">
+            <h3 class="text-xl font-black text-blue-950 mb-1">تسجيل اسم المعلم</h3>
+            <p class="text-xs text-slate-500 mb-4">سيتم حفظ اسمك في هاتفك وإدراجه في تقارير الإكسيل والمزامنة السحابية.</p>
+            <input type="text" id="teacher-input" placeholder="اكتب اسم المعلم هنا (مثال: أ. محمد أحمد)" class="w-full border-2 border-slate-200 focus:border-blue-600 rounded-2xl px-4 py-3 text-base font-bold text-slate-800 focus:outline-none mb-4">
+            <div class="flex gap-2">
+                <button onclick="saveTeacherName()" class="flex-1 bg-blue-800 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition">حفظ الاسم</button>
+                <button onclick="closeModal('modal-teacher')" class="px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-student" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl screen-fade">
+            <h3 id="student-modal-title" class="text-xl font-black text-blue-950 mb-1">إضافة طالب جديد</h3>
+            <p class="text-xs text-slate-500 mb-4">أدخل اسم الطالب رباعياً أو ثلاثياً لحفظه في هذه الخانة.</p>
+            <input type="text" id="student-name-input" placeholder="اسم الطالب..." class="w-full border-2 border-slate-200 focus:border-emerald-600 rounded-2xl px-4 py-3 text-base font-bold text-slate-800 focus:outline-none mb-4">
+            <div class="flex gap-2">
+                <button onclick="confirmStudentModal()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition">تأكيد وحفظ</button>
+                <button onclick="closeModal('modal-student')" class="px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-delete-student" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl screen-fade">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mb-3">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mb-1">تأكيد حذف الطالب</h3>
+            <p id="delete-student-message" class="text-xs text-slate-600 mb-4 leading-relaxed">هل أنت متأكد من حذف هذا الطالب نهائياً من القائمة؟ سيتم إعادة ترقيم باقي الطلاب تسلسلياً.</p>
+            <div class="flex gap-2">
+                <button onclick="confirmDeleteStudent()" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition">نعم، احذف الطالب</button>
+                <button onclick="closeModal('modal-delete-student')" class="px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-reset" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl screen-fade">
+            <div class="w-12 h-12 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mb-3">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mb-1">إعادة ضبط القوائم الأصلية</h3>
+            <p class="text-xs text-slate-600 mb-4 leading-relaxed">سيؤدي هذا الإجراء إلى استعادة قوائم الطلاب الأصلية لهذا الفصل وتصفير عدادات الغياب الخاصة به. هل تريد المتابعة؟</p>
+            <div class="flex gap-2">
+                <button onclick="resetCurrentClassToDefault()" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition">نعم، إعادة الضبط</button>
+                <button onclick="closeModal('modal-reset')" class="px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-export" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl screen-fade">
+            <div class="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mb-3">
+                <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-black text-slate-900 mb-1">تصدير كشف الفصل إلى Excel</h3>
+            <p class="text-xs text-slate-500 mb-4">اختر نوع التقرير الذي تريد تنزيله بصيغة (.xlsx):</p>
+            <div class="space-y-2.5 mb-4">
+                <button onclick="exportClassExcel('daily')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl text-sm transition">تقرير غياب اليوم المحدد</button>
+                <button onclick="exportClassExcel('cumulative')" class="w-full bg-blue-800 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition">تقرير الإجمالي التراكمي للفصل</button>
+            </div>
+            <button onclick="closeModal('modal-export')" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-sm transition">إغلاق</button>
+        </div>
+    </div>
+
+    <div id="modal-share" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl screen-fade">
+            <h3 class="text-xl font-black text-blue-950 mb-1">مشاركة رابط البرنامج</h3>
+            <p class="text-xs text-slate-500 mb-3">انسخ الرابط التالي لإرساله للمعلمين والإدارة:</p>
+            <input type="text" id="share-link-input" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 mb-3">
+            <div class="flex gap-2">
+                <button onclick="copyShareLink()" class="flex-1 bg-blue-800 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm transition">نسخ الرابط</button>
+                <button onclick="closeModal('modal-share')" class="px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-sm transition">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="hidden fixed top-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-2xl z-[60]"></div>
+
+    <!-- ===================================================================== -->
+    <!-- بداية قسم إعدادات Firebase (firebaseConfig) لمشروع kafr-mansoura-school -->
+    <!-- ===================================================================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAjW_W-SGIRgteKlqg7miwoPBnx56HOsiw",
+            authDomain: "kafr-mansoura-school.firebaseapp.com",
+            projectId: "kafr-mansoura-school",
+            storageBucket: "kafr-mansoura-school.firebasestorage.app",
+            messagingSenderId: "16126431017",
+            appId: "1:16126431017:web:ce3c718be7b51b8d2ff138",
+            measurementId: "G-PGZH0HZGR0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.cloudSync = {
+            subscribeAllClasses: function(onRemoteClassUpdate) {
+                const allKeys = Object.keys(window.DEFAULT_CLASSES || {});
+                allKeys.forEach((clsKey) => {
+                    const ref = doc(db, "kafr_mansoura_classes", clsKey);
+                    onSnapshot(
+                        ref,
+                        (snap) => {
+                            window.setCloudStatus(true, "متصل ومزامن لحظياً مع Firestore");
+                            if (snap.exists()) {
+                                onRemoteClassUpdate(clsKey, snap.data());
+                            }
+                        },
+                        () => {
+                            window.setCloudStatus(false, "وضع محلي — تحقق من قواعد Firestore");
+                        }
+                    );
+                });
+            },
+            saveClassToCloud: async function(clsKey, classObj) {
+                try {
+                    const ref = doc(db, "kafr_mansoura_classes", clsKey);
+                    await setDoc(ref, classObj, { merge: true });
+                    window.setCloudStatus(true, "متصل ومزامن لحظياً مع Firestore");
+                    return true;
+                } catch (e) {
+                    window.setCloudStatus(false, "حفظ محلي — تحقق من قواعد Firestore");
+                    return false;
+                }
+            }
+        };
+
+        if (typeof window.initCloudListeners === "function") {
+            window.initCloudListeners();
+        }
+    </script>
+    <!-- ===================================================================== -->
+    <!-- نهاية قسم إعدادات Firebase (firebaseConfig) -->
+    <!-- ===================================================================== -->
+
+    <script>
+        const DEFAULT_CLASSES = {"1-1": ["ابراهيم حبشي ابراهيم عبدالرحيم", "احمد بهاءالدين احمد ابراهـيم", "احمد كمال غريب كامل", "احمد محمود ناجي احمد", "ادم عبدالجليل محمد عبدالجليل محمد", "ادم محمد خراشي محمد", "ادم وليد رمضان فتحي", "ادهم محمد محمد صلاح", "انس حسام عطا على", "انس يحي عبدالرؤف محمد", "اياد وليد عبدالحكيم محمد", "حسين شعبان حسين ابو الليل", "حمزه سعيد رئيف فؤاد", "حمزه محمود عبدالرحيم عبدالمجيد محمد", "ساجد عماد نبيل عيسى", "سيف محمد سيد علي سرحان", "طه طارق علي حسن حسين", "عبدالرحمن اسامه كمال علي محمد", "عبدالرحمن محمد حسن عتربي", "عبدالرحمن محمد فتحي ربيع", "عبدالرحمن وائل فتحي محمد", "عبدالرحمن ياسر عبدالله ابراهيم", "عبدالله صلاح عبدالنبي السيد", "على عبدالمنعم على عبدالمنعم", "علي قاسم محمد القدري", "عمر احمد سيد عباس بكر", "عمر علاء سيد ابراهيم حسين", "عمرو خالد محمد زكي", "فهد احمد فتحي احمد", "كريم محمد عبد الحميد صالح", "محمد ابوبكر سيد حجاج", "محمد احمد محمد احمد ابراهيم", "محمد احمد ناصر عرابي", "محمد حسام الدين احمد عبدالجواد", "محمد رضا فاروق احمد", "محمد عبدالرحمن حسن احمد", "محمد علي كامل احمد", "محمد فؤاد صابر فؤاد", "محمد مختار عبدالحكم احمد", "محمد ياسر احمد عبد العال", "محمود علاء ربيع عيد", "محمود مصطفى محمد محمود على", "مروان محمد نبيل كامل", "مصطفى عبدالقادر محمد عبدالكريم", "مصطفى مؤمن امين عبدالرحيم قطب", "ممدوح محسن مجدي قرني محمد", "ياسين عصام محمد امام", "ياسين مصطفى اسماعيل مرسي", "يوسف رجب ابراهيم عبدالحميد", "يوسف محمد ابراهیم سید", "يوسف وليد موسى عبد الحكيم"], "1-2": ["ابراهيم عطا سيد عطا", "احمد حسام حسن عطيه", "احمد عبدالرحمن ابراهيم احمد", "احمد محسن عيد على", "احمد مصطفى احمد عبدالعاطي", "ادم عبدالحافظ محمد عبدالحافظ", "ادم محمد قطب محمد", "ادهم احمد محمد عبد السميع", "ادهم ناجي محمد ناجي", "انس سيد ماضي ابو العزايم", "اياد احمد علي عبد الوهاب", "اياد محمد حسين كامل", "بدر عمرو فؤاد احمد", "حازم رمضان زغلول محمد", "حمزه عبدالرافع مسلم عبدالرافع", "حمزه محمد شحاتة توني", "رضا عمرو شعبان اسماعيل", "سيد خالد هاشم رضوان", "شريف ياسر محمد احمد", "عبدالرحمن عبدالعزیز خیری محمود", "عبدالرحمن محمد فرغلي سيد", "عبدالرحيم عيد عبدالرحيم ماضي", "عبدالله عمرو بدر حامد", "علي احمد حماد حمدي حماد", "علي محمد طلعت على", "عمر احمد محمد احمد محمد", "عمر علي محمد عبدالحكم يوسف", "عمرو محمد عبدالعزيز حمزه", "فهد فولى فرج على", "كريم وليد احمد رفعت", "محمد احمد احمد شلقامي", "محمد احمد محمد عبدالعال", "محمد اسامه فاروق كامل", "محمد حسن شعبان اسماعيل", "محمد زغلول سعد حسن فرغل", "محمد عبدالحافظ محمد عبدالحافظ", "محمد عبدالرحمن رجب محمد", "محمد علي محمد عبدالكريم", "محمد قدرى سيد سعد", "محمد مصطفى عبدالرؤوف بركات موسى", "محمد هشام اسماعیل صدیق", "محمود علي اسماعيل يوسف", "محمود مؤمن حسانين فرج", "مروان محمد احمد محمد", "مصطفى محمد حامد حمدي", "مصعب خالد محمد احسان", "منير ياسر سید على", "ياسين علاء محمد حسن", "يزيد محمد قطب شحاتة", "يوسف سيد علي محمد", "يوسف محمد عبدالله سداد", "يونس حارس رفاعي على"], "1-3": ["احمد الحسيني ربيع سيد", "احمد حسن حسين عبدالظاهر اسماعيل", "احمد عبدالناصر امين جبر احمد", "احمد محمد احمد حافظ", "احمد ناصر محمد عبدالعليم", "ادم عصام محمد ابو العزايم", "ادم محمود ربيع عبدالسلام", "ادهم سيد جمعه عبده على", "اسلام هشام علی مرسی", "انس عبدالرحمن سيد عبدالحي", "براء اسماعيل علي اسماعيل", "حازم منتصر فايز محمد", "حسين محمد حسين احمد محمد", "حمزه محسن جمال سید", "خالد شريف نبيل حسين", "رحيم محمد قاسم عبدالرحمن", "رياض علاء صلاح رياض توفيق", "سيد زين محمد صالح على", "صالح محمد صالح محمد فوزي", "طارق منتصر صلاح سید", "عاصم محمود حماده محمد ابو الحسن", "عبدالرحمن عوض احمد توني", "عبدالرحمن محمد فؤاد عبد الهادي", "عبدالفتاح رعد عبدالفتاح على", "عدى محمود عادل سعد", "علي احمد محمد محمد", "علي محمد عبد الكريم محمد", "عمر اشرف محمود عبد الحميد", "عمر عماد محمد على", "فارس احمد مختار زكي", "قاسم ابوزيد قاسم على", "مازن وائل محمد عطا الكريم", "محمد احمد تونى حسن", "محمد احمد محمد عيسى جاد", "محمد اشرف عصام الدين عطيه", "محمد شريف محمد عزمي عبدالفتاح", "محمد عبدالرحمن فوزي محمد", "محمد عماد علي محمد", "محمد محسن محمد عبداللطيف عبوده", "محمود احمد عاشور خلف", "محمود علي عايش عبد النعيم على", "مروان صلاح فتحي توني", "مصطفى احمد مصطفى محمد", "مصطفى محمد شوقى ابو الليل", "معاذ احمد محمد الراعي", "موسى وليد محمد موسى", "ياسين محمد صلاح عبد الجواد", "يحيى هيثم عبد المنعم شعبان", "يوسف ضاحي احمد حسين"], "1-4": ["احمد امين رمضان جمعة", "احمد خالد محمود عبدالغني متولي", "احمد محمد اشرف يحي", "احمد محمد مسلم محمد", "ادم علاء عبد النبي انور", "ادم محمد ابراهيم عبدالوهاب", "ادم محمود شعبان زیدان", "انس محمد صلاح حسن", "اياد جمال ربيع محمد", "بلال محمود شعبان محمد", "جمال احمد جمال محمد عبد اللطيف", "حبشی عبدالجواد صلاح محمد", "حسين محمد حسيني محمد", "حمزه محمد رجب عبدالحق", "زياد احمد ربيع محمود", "سيف احمد فؤاد محمد", "طارق حسن محمود عبدالحميد", "عاصم طه سيد على", "عبدالرءوف احمد عبدالرؤف بدر", "عبدالرحمن محسن فؤاد طلبه محمود", "عبدالرحمن مختار عمر عبدالعليم", "عبدالقادر مصطفى عبد القادر محمد", "عدى محمود محمد يحي", "علي ايمن علي حسن", "علي محمد علي عبدالوهاب", "عمر محسن علم.الدين عطيه", "فارس عيد احمد عبدالنعيم", "مالك احمد حمدي عامر", "محمد احمد سيد محمد عبدالرازق", "محمد احمد ضاحي سليمان", "محمد احمد محمود احمد", "محمد ايهاب علي حماد", "محمد حماده محمد عبدالرحمن", "محمد طه محمد عبدالغني", "محمد عبدالرحيم محمد عبدالرحيم", "محمد عمر احمد عمر", "محمد محمود عبد الرازق عبد الوهاب", "محمد مصطفى كامل قرني", "محمد منتصر محمد ابوضيف", "محمود الحسين ابراهيم سيد", "محمود علي محمد على", "مختار جمال اسماعیل عياط", "مصطفى اسامه عبدالرحيم محمد", "مصطفى محمد مخلوف خلف", "معاذ احمد محمد شحاتة", "ياسين عزت سید امین", "ياسين محمد مسلم محمد", "ياسين ناصر محمد على", "يوسف محمود عبدالقادر احمد"], "1-5": ["احمد امين محمد محمد امين", "احمد رمضان ابراهيم احمد", "احمد صابر كامل خليل", "احمد عبدالنبى علي حسن", "احمد علواني عبدالجواد محمد", "احمد محمد صلاح محمد موسى", "ادم احمد نجد محمد عبد العظيم", "ادم على رفاعي محمود", "ادم مختار محمد نجيب", "ادهم محمد كامل نصار", "القاسم محمد ابو القاسم محمد", "انس محمد عبد الغني محمد", "اياد سيد علي هاشم جبر", "بلال محمود صبحي شحاته", "حذيفه محمد مرزوق عبدالباسط", "حسين مجدى احمد شلقامى", "حمزه ابراهيم حجازي عبدالستار", "خالد رمضان فولي توني", "ربيع محمد محمد احمد", "زياد عمرو فتحی عطيه", "سيف سيد رجب سيد", "طارق شهاب طارق حسن", "عبدالرحمن محمد بهيج كيلاني", "عبدالرحمن مؤمن احمد محمد", "عبدالله احمد علي عبدالفتاح", "عصام رمضان جلال محمد", "علي جاسر علي عبد الرافع", "عماد محمد علي عبدالفتاح شريف", "عمر خالد محمد طلعت عبدالفتاح", "عمر محمد خالد احمد", "فتحى احمد محمد فتحى احمد اسماعيل", "مالك محمد سعودى عبدالوهاب", "محمد احمد محمود عبد الغنى", "محمد بكر علي الخواص", "محمد حماده محمد مقيدم", "محمد عاشور خفاجه سداد عبدالعليم", "محمد عرفه محمد على", "محمد عمرو محمد محمد مخلوف", "محمد محمود عبد الله احمد", "محمد مصطفی سید صدیق", "محمود رجائى حموده احمد", "محمود محمد رفعت ابو زيد", "مروان اسامه صلاح محمود", "مصطفى اسماعيل مصطفى اسماعيل", "مصطفى محمد مصطفی صابر سید", "معاذ سيد علي صابر", "ياسين ابوبكر بدوى محمد", "ياسين محمد عبدالكريم ابو الليل", "ياسين مصطفى شعبان عمر", "يوسف عيد محمد اسماعيل", "يوسف محمود قطب كامل"], "1-6": ["ابراهيم ايهاب ابراهيم محمد", "احمد سيد محمد ناجى", "احمد علي كيلاني علي كيلاني", "ادم احمد حسن عبد العال", "ادم عمرو علي محمد محمد الشريف", "ادم مصطفى ربيع عبداللطيف", "ادهم ايهاب ابراهيم محمد", "ادهم عبدالرؤوف انور حسين", "المصطفى احمد خليفه محمد محمد", "انس مصطفى فخرى عبدالحميد", "اياد محمود سيد محمود", "جاسر محمد فرغلي احمد زكي", "حسام حسن اسماعيل حسن حسين", "حمزه جمال عبدالحي عبدالوهاب", "حمزه محمد عبد الجواد عبد الله", "رجب محسن رجب راضی", "زياد احمد كمال كامل", "سيف عماد عبدالعزيز محمد", "عبدالرحمن ايمن جمعه احمد", "عبدالرحمن ناصر فتحي شاكر", "عبدالله حسن خالد احمد", "علاء مجدي حلمي عبدالكريم", "علاءالدين محمد ابو بكر يوسف", "علي عبدالغني علي عبد الرافع", "عمر زين العابدین عوض موسى", "عمر محمد عبد النبي خلف", "عمر مصطفى محمود على", "فضل رمضان فضل احمد", "كريم شریف احمد ابراهیم", "مجدى محمد مجدى سيد", "محمد احمد فرغلي عبد الجواد", "محمد احمد مصطفى عبدالرسول", "محمد بهاء محمد فرغلي سليمان", "محمد حسنى احمد خالد", "محمد حمدى ابراهيم خليفة", "محمد عبد الجليل محمد عاطف", "محمد عصام احمد على", "محمد عيد خلف محمد", "محمد محمود عيد محمود خليل", "محمد مصطفى محمد خلف", "محمود زغلول سعد حسن", "محمود محمد فخري عبدالحميد", "محمود يحيي سيد عثمان", "مصطفى اشرف عبدالحميد سيد", "مصطفى عبدالغني علي عبد الرافع", "معاذ محمد عطيه عوض الله", "ياسين طه منصور محمود سيد", "ياسين محسن فاروق محمد", "يوسف خالد صلاح عبدالحكيم", "يوسف محسن فاروق محمد", "يوسف مؤمن عيد عبدالرافع"], "1-7": ["ابانوب ايمن سمير ملك عبدالمسيح", "ابانوب مينا حبيب عبدالشهيد", "ابانوب يوسف جمال بشاره", "ابرام ميلاد عزمي عبدالسيد", "ادم باسم نصيف حرز ناروز", "ادم مهدی فولي مهدي", "ادهم محمد ماهر حافظ", "استيفن وجيه مسعد شحاته", "اسماعيل محمد اسماعيل احمد", "امیر ابراهيم عز زاخر", "اياد محمود محمد احمد", "جرجس نادي حنا نجيب", "جورج اشرف ايوب اسكندر", "جوفان مختار صدقي اسعد", "جون صموئيل معوض حزقيال", "حمزه رضا فخري حسين", "رامز بهاء سيداروس اسحق", "رومانى اشرف سامي فهمي", "ريمون ميلاد فرج برسوم", "شنوده جورجي اسحق ابسخرون", "شنوده عبدالشهيد حبيب عبدالشهيد", "شوقى نادي شوقى رشدي", "عبدالرحمن خالد عثمان حسن", "عبدالله رضا صالح رشاد", "علي عبدالرحمن جمال عبدالفتاح", "عمار ناصر علي عبد العظيم", "عمر اشرف مسلم محمد", "فادى عماد فرج ابراهيم", "كاراس سامي فوزي عطيه", "كاراس مرزوق شحاته فرج", "كيرلس عماد بنيامين ابراهيم", "كيفن يوسف مجدى مفيد", "مارتن اشرف نبيل عزیز", "محمد توفيق علي توفيق", "محمد رﺿﺎ ﺳﯾد بيومي", "محمد علي فاروق كامل", "محمد عيد محمد عمر", "محمد محمود محمد حسن", "محمد مؤمن محمد كامل", "محمود شحاته ممدوح عمر", "محمود محمد محمود محمد", "مصطفى احمد فولي سعد", "مصطفى رجب رمضان عبدالقادر", "مصطفى محمود عمر عبدالعزيز", "معاذ محمود النجار محمود", "مؤيد حماده شحاته عبدالخالق", "ياسين محمود عبدالحميد رفاعي", "يوسف دياب حماد حمدنى", "يوسف صبحي مسعد شحاته", "يوسف هانى رجب محمود"], "1-8": [], "2-1": ["ابراهيم احمد محمد عزمى", "احمد اشرف فرغل عبدالرحيم", "احمد حسين محمد فتحى", "احمد عماد جمال خلف", "احمد محمد احمد عبد العال", "احمد محمد عوض عبدالفتاح", "احمد وليد احمد قرنى", "ادم محمد حبشى على", "ادهم علاء عادل صابر", "الحسيني محي صابر عبد الهادي", "انس هشام محمد عبد الكريم ضبيعي", "توفيق محمد محمد توفيق", "حسام مصطفی احمد محمد هارون", "حسين مؤمن محمد احمد", "حمزه رفاعي فاروق حسن", "خالد وليد حسن عبد الحميد", "زياد رجب محمد ثابت سلیمان", "سيف محمد ابراهيم عبده", "ضياء محمد عبد النبى مصطفى", "عاصم احمد محمد احمد عبد الرحيم", "عبدالرحمن احمد محمود عبد الغني", "عبدالرحمن عمرو محمد حسن", "عبدالرحمن محمد فارس محمد جلال", "عبدالله محمد احمد عبدالله", "عدى عمرو عبد العال على", "على احمد علي عبدالعال", "علي محمد علي عبد الوهاب", "عمر عصام ابراهيم محمد", "فارس حسام عبد النبي خلف", "فتحى رمضان فتحى عبد الفتاح", "مازن احمد محمد هاشم", "مالك مروان محمد رشدي سنوسي عثمان", "محمد احمد فؤاد احمد", "محمد اشرف فولى تونى", "محمد حسن فوزي محمد", "محمد خالد خليل محمد خضر", "محمد سامح اسماعیل محمد", "محمد علاء محمد دياب", "محمد فاروق محمد فاروق", "محمد محمود علي عبد العليم", "محمد منتصر محمد حسنى", "محمود اشرف محمد الجندي محمد", "محمود مصطفى محمود محمد", "مروان ضياء الحق محمد ماضي", "مصطفى رضا محمد جمال الدین", "مصطفى محمد سيد خليل", "مهند عصام ابو بكر مصطفي", "ياسين احمد سيد محمد أحمد", "ياسين حسام الدين مصطفى", "ياسين عبد المنعم محمد عبد الغني", "ياسين محمد عبد الجابر رمضان", "يحي ابراهيم يحي ابراهيم الدسوقي محمد", "يوسف شعبان شحاته مهني", "يوسف محمد فرغلي محمد عثمان", "یاسین سلامه جمال الدين عبد العزيز"], "2-2": ["ابراهيم رمضان ابراهيم هاشم احمد", "احمد انور ربيع عبد السلام", "احمد حسین احمد زكي عبد اللطيف", "احمد عبد الرحمن محمد ربيع محمد", "احمد عماد حمدي هاشم", "احمد محمد خراشي محمد عثمان", "احمد محمد فخرى عبدالحميد", "احمد ياسر حسني يوسف سليم", "ادم محمد عبد اللاه محمد", "ادهم عمرو محمد صبرى محمد حسین", "القاسم احمد رجب علي", "اياد احمد حسن محمد", "جابر فرج مصطفى محمد", "حسن سيد رمضان كامل", "حسین طه حسين مصطفى فرغلي", "حمزه عبدالله محمود", "دیاب محمود فوزي عبد الرحمن", "ساجد عمرو عبدالروؤف خلف", "سيف محمود رضا سيف", "طارق عادل فواد عبد الحليم", "عاصم علي علاء الدين محمد", "عبدالرحمن حامد إبراهيم عطا حسين", "عبدالرحمن محمد حافظ محمد", "عبدالرحمن محمد موسى مرعى على", "عبدالله محمد على محمد إسماعيل", "عدى محمد سخى محمد", "على اشرف علي حسن", "عمار سيد اسماعيل جاد", "عمر عماد الدين فاروق محمد", "فارس رضا حمدين عبد المالك", "فهد عمرو احمد اسماعيل هلال", "مازن محمد ربيع كامل", "مجدى محمود مجدي محمد عبد الحكيم", "محمد احمد كامل محمد علي", "محمد انور محمد صالح", "محمد حسين حسن محمود عبد العال", "محمد خالد على حسن", "محمد سيد هاشم احمد", "محمد علي احمد توني", "محمد كامل رمضان كامل محمد", "محمد محمود محمد عبد الجليل محمد", "محمد نصر الدين ابوبكر نصر الدين", "محمود محمد سيد سيد", "محمود مؤمن بخيت علي", "مروان عمر ربيع جاد محمد", "مصطفى سيد قطب محمد", "مصطفي مهني رجب مهني", "مؤمن عرفات احمد محمد", "ياسين احمد شعبان عبد الحميد محمد", "ياسين خالد عايش عبد النعيم", "ياسين عطا شحاته زكي", "ياسين محمد عبد السلام عبد الكريم", "يوسف احمد ممدوح محمد", "يوسف عامر عبدالفتاح عبدالحميد", "يوسف محمود شحاته يوسف شحاته"], "2-3": ["ابراهيم عبد العليم محمد عبد العليم", "احمد حسام مصطفى على", "احمد حماد محمود حماد علي", "احمد عبد الكريم محمد سید اسماعیل", "احمد عمار لملوم عبد الرحمن", "احمد محمد ربيع حفنى", "احمد محمد موسى أحمد على", "ادم رجب سید قطب محمد", "ادم محمد على حنفى", "ادهم ولید صابر اسماعیل", "الياس احمد حسنى عبد السلام احمد", "ايمن حماد ورداني عبد الحكيم", "جابر محمود عبد الجابر حماد", "حسن عمرو حسن محمود", "حمدى احمد حمدي احمد عبد العال", "حمزه معتز حمدي محمود", "رابح احمد محمد عبد الحليم قطب", "سراج علي صابر علي", "شمس.الدين محسن محمد نجيب", "طارق محمد عبد المجيد محمد", "عاصم عماد عبد العال على", "عبدالرحمن راضي يونس صميده", "عبدالرحمن محمد رمضان محمود سطوحي", "عبدالرحمن ناصر عنتر محمود", "عرفات سيد مصطفي إبراهيم", "على حماده علي اسماعيل", "عمر احمد عادل محمد", "عمر محمد فاروق شلقامي", "فارس سلامه فتوح حسن محمد", "كريم رعد عبدلفتاح على", "مازن محمد محمود کامل", "مجدى نميري مظهر عبد الحميد عثمان", "محمد احمد محمد محمد", "محمد انور محمد عبدالكريم", "محمد حسين شحاته حسين", "محمد خالد محمد زكي", "محمد صلاح سعودی عبد المحسن", "محمد علي سيد احمد", "محمد محرم فؤاد أحمد مخلوف", "محمد محمود محمد محمد", "محمد هيثم عبدالرحمن محمود", "محمود محمد احمد محمد ابراهيم", "محمود يوسف محمد کامل خفاجه", "مروان محمد عبد العظيم عبد العظيم على", "مصطفى سید علی محمد", "معاذ محمد عبدالحميد احمد", "نورالدين احمد نورالدين حسين", "ياسين احمد عطية احمد", "ياسين رفاعی سید محمد محمود", "ياسين محمد محمود زينهم", "يوسف اسامه سالم احمد", "يوسف عثمان محمد امین", "يوسف محي الدين عبدالنبي خلف"], "2-4": ["احمد ابراهیم احمد ابراهیم", "احمد حسن احمد ابوزید", "احمد خلف احمد محمد خلف", "احمد صابر رمضان أحمد", "احمد علاء احمد محمد على", "احمد محمد ابراهيم ماضى", "احمد محمد عبد الحميد سنوسي عطا", "احمد محمود حمدي شحاته", "ادم طارق فتحي محمد", "ادم مصطفى رفاعي محمد رفاعي", "اسامه غريب قطب جمال محمد", "انس احمد محمد جمعه", "ايمن محمد قطب محمود", "حازم عبدالله سمير محمد", "حمدى حسين حمدي حسين", "حمزه مؤمن محمد عبدالحميد", "سيد ذكي سيد زكي محمد", "صابر حماده صابر ابراهیم حداد", "طه منتصر شعبان محمد سید", "عاصم محمد عادل صابر", "عبدالرحمن رجب عادل عبدالمجيد", "عبدالرحمن محمد صلاح عبدالسلام", "عبدالله رضا مجدى تونى", "عبدالمجيد محمود على الخواص", "عزت اسامه عزت محمد سيد", "على شريف محمد عبد الفتاح", "عمر احمد فرغلى محمد", "عمر محمد نصر عبدالوهاب", "فارس محسن حسن محمود", "كريم عبد العزيز جلال محمد", "مالك خالد فرغلي محمد", "محمد احمد جابر فهمى", "محمد احمد نبيل عبد النعيم فرحات", "محمد ايمن مبروك عبد الحميد على", "محمد حمادة احمد محمد", "محمد رأفت محمد إسماعيل محمد", "محمد صلاح محمد عبد الصمد إبراهيم", "محمد عماد حمدى عبد العزيز", "محمد محسن سعد محمود على", "محمد مختار محمد عبدالحميد", "محمد وليد جمال زيدان", "محمود عزام سعودى ابوالطيب", "مروان احمد سيد على", "مصطفى احمد سيد علي", "مصطفى عاشور جاب الله مرسي", "معاز احمد ابراهيم احمد صالح", "هادى سيد احمد محمد", "ياسين احمد محمد فتحی احمد", "ياسين صابر احمد محمد", "ياسين عماد محمد ناجي", "ياسين محمود عصام انور", "يوسف سعيد زيدان عبدالله", "يوسف علاء طلعت تونى", "يوسف مصطفى رجب سید"], "2-5": ["احمد ابوبكر عبدالدايم عبدالحميد", "احمد حسين عبد الحميد رفاعى", "احمد صابر احمد صابر", "احمد علاء محمد أحمد", "احمد محمد ابراهیم سید ابراهیم", "احمد محمد عبدالغنى مناع", "احمد محمود محمود حسين عثمان", "ادم محمد انور عبدالعليم", "ادهم خالد طلعت عبد الباقي", "اسلام احمد قطب سيد", "انس محمد رجب محمد", "براء بكر عبدالبارى سيد فتح الباب", "حازم محمد محمد رشاد نور الدين", "حسن مصطفى عربى مصطفى", "حمزه احمد عبد الحكيم محمد", "حمزه ناصر سيد عبدالحكيم", "ربيع محمد ربيع شحاته عبد الكريم", "سيف محسن سيد رجب", "صهيب احمد محمود اسماعيل", "عاشور محمد عاشور خلف", "عبدالرحمن احمد جبر امين احمد", "عبدالرحمن رضا احمد زنونى", "عبدالرحمن محمد عبدالله حسنى", "عبدالله عبد الخالق عابد رمضان", "عبدالمنعم علاء عبدالمنعم محمد", "عصام محسن سيد محمد", "على عبدالحميد عبدالصبور عقيلي", "عمر جعفر علي عبدالرافع", "عمرو احمد صلاح سید", "فارس مدحت على فؤاد هاشم", "كريم محمد فتحي محمد", "مالك عصام محمد كامل", "محمد احمد عبد الهادى عبد الله", "محمد اسامه عشری ابو الليل", "محمد جعفر محمود عبد المنعم", "محمد حماده ابو السعود محمد محمد", "محمد ربيع ناجي إسماعيل", "محمد عرفات محمد عز الدين", "محمد عماد محمد حسن محمد", "محمد محسن محمد اسماعيل", "محمد مصطفى ابوبكر عبدالحميد", "محمود ابراهيم توفيق علي", "محمود محمد طه سید ابراهیم", "مروان رمضان حسن محمد", "مصطفى اشرف محمد محروس", "مصطفى عطيه غريب عطيه", "مهاب محمد جمعه عبده", "وسام احمد سید احمد", "ياسين احمد محمد ياسين", "ياسين عبد الرحمن فتحي فاروق", "ياسين قاسم محمد القدري قاسم علي", "ياسين ياسر فوزى حسن", "يوسف شعبان حمد الله محمد", "يوسف على ابراهيم ماضي", "يوسف مصطفى عثمان طه"], "2-6": ["ابانوب اشرف يوسف عبدالشهيد", "ابانوب شريف فوزي حنين", "ابرام عماد بولس محروس بباوي", "ابرام وائل فاروق جاب الله", "احمد محمد احمد حسن", "احمد محمد علي عبدالواحد علي", "احمد هاني مصطفى سيد", "ادم محمد جمال محمد", "ادهم سيد محمد فرغلي سليمان", "الحسينى محمود احمد محمد", "انس مصطفى حمدى هاشم", "انطونيوس عماد سمير بشري", "بيشوى رومانى كرم صديق", "حسين احمد عبد الهادي حسين", "حمزه الحسيني محمد عطية", "خالد محمد عاشور عبدالحمید محمد", "ربيع احمد ربيع محمد", "رحيم اسامه محمد سيد", "روبن ماجد فايق بشري", "رومانى اسحق عبد الله عبده", "سيف جمال عادل اديب", "عبدالرحمن احمد شعبان عبدالنعيم", "عبدالرحمن سيد احمد محمود", "عبدالرحمن محمد علي عبدالحكيم", "عبدالله على شحاته مرسى", "عدى عبد المؤمن محمد عطا الله", "علاء محمد عبد الحكيم حزين عبد الحكيم", "على عمرو على محمد محمد الشريف", "عمر حسين محمد فؤاد", "عمر عاشور محمد ابو العلا", "فتحى احمد فتحى كامل", "كاراس عماد ناصف بشاي رزق الله", "كيرلس سمير شحاته رياض", "محمد احمد فتح الباب عبد المعز", "محمد اشرف احمد يونس", "محمد حسن عبدالرؤوف بدر", "محمد حماده محمد يوسف", "محمد رمضان زغلول محمد", "محمد علاء عمار شحاته", "محمد عمران حسين احمد", "محمد محمود طاهر حسن", "محمد مصطفى محمد عيسى", "محمود اشرف رفعت فهمي", "محمود مصطفى عبدالرازق عبدالحكيم", "مروان شريف صلاح محمود", "مصطفى ايمن عبد العاطى رمضان", "مصطفى محمد رجب محمد", "مهند شعبان شحات محمد مخلوف", "ياسين احمد حسن محجوب", "ياسين امير رمضان محمد", "ياسين عبد العليم علي عبد العليم", "ياسين مجدى محمد احمد", "يامن محمد ابراهيم الدسوقي محمد السيد", "يوثام امير سمير داوود", "يوسف عاشور محمد ابو العلا", "يوسف وحید رمضان مغربی"], "2-7": [], "2-8": []};
+        window.DEFAULT_CLASSES = DEFAULT_CLASSES;
+
+        const SLOTS_PER_CLASS = 60;
+        const STORAGE_KEY = "kafr_mansoura_prep_boys_v2";
+        const TEACHER_KEY = "kafr_mansoura_teacher_name_v1";
+
+        const ARABIC_DIGITS = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];
+        function toArabicNum(n) {
+            return String(n).replace(/\d/g, d => ARABIC_DIGITS[Number(d)]);
+        }
+        function formatClassArabic(key) {
+            const [g, c] = key.split("-");
+            return `${toArabicNum(g)} - ${toArabicNum(c)}`;
+        }
+
+        function buildDefaultState() {
+            const data = {};
+            Object.keys(DEFAULT_CLASSES).forEach((key) => {
+                const arr = (DEFAULT_CLASSES[key] || []).slice(0, SLOTS_PER_CLASS);
+                while (arr.length < SLOTS_PER_CLASS) arr.push("");
+                data[key] = {
+                    students: arr,
+                    absencesByDate: {}
+                };
+            });
+            return data;
+        }
+
+        function loadState() {
+            const base = buildDefaultState();
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return base;
+                const parsed = JSON.parse(raw);
+                Object.keys(base).forEach((key) => {
+                    if (parsed[key]) {
+                        const st = Array.isArray(parsed[key].students)
+                            ? parsed[key].students.slice(0, SLOTS_PER_CLASS)
+                            : base[key].students;
+                        while (st.length < SLOTS_PER_CLASS) st.push("");
+                        base[key] = {
+                            students: st,
+                            absencesByDate: parsed[key].absencesByDate || {}
+                        };
+                    }
+                });
+            } catch (e) {}
+            return base;
+        }
+
+        let appState = loadState();
+        let currentGrade = 1;
+        let currentClassKey = "1-1";
+        let studentModalMode = "add";
+        let editingStudentIndex = null;
+        let pendingDeleteIndex = null;
+
+        function saveLocal() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        }
+
+        window.setCloudStatus = function(online, msg) {
+            const dot = document.getElementById("sync-dot");
+            const txt = document.getElementById("sync-text");
+            if (dot) {
+                dot.classList.toggle("bg-emerald-400", online);
+                dot.classList.toggle("animate-pulse", !online);
+                dot.classList.toggle("bg-amber-400", !online);
+            }
+            if (txt) txt.textContent = msg;
+        };
+
+        window.initCloudListeners = function() {
+            if (!window.cloudSync) return;
+            window.cloudSync.subscribeAllClasses((clsKey, remoteData) => {
+                if (!appState[clsKey]) return;
+                const st = Array.isArray(remoteData.students)
+                    ? remoteData.students.slice(0, SLOTS_PER_CLASS)
+                    : appState[clsKey].students;
+                while (st.length < SLOTS_PER_CLASS) st.push("");
+                appState[clsKey] = {
+                    students: st,
+                    absencesByDate: remoteData.absencesByDate || {}
+                };
+                saveLocal();
+                if (!document.getElementById("screen-attendance").classList.contains("hidden") && currentClassKey === clsKey) {
+                    renderAttendanceScreen();
+                }
+                if (!document.getElementById("screen-admin").classList.contains("hidden")) {
+                    renderAdminDashboard();
+                }
+            });
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById("toast");
+            t.textContent = msg;
+            t.classList.remove("hidden");
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => t.classList.add("hidden"), 2500);
+        }
+
+        function hideAllScreens() {
+            ["screen-home", "screen-classes", "screen-attendance", "screen-admin"].forEach((id) => {
+                document.getElementById(id).classList.add("hidden");
+            });
+        }
+
+        window.goHome = function() {
+            hideAllScreens();
+            document.getElementById("screen-home").classList.remove("hidden");
+        };
+
+        window.openGrade = function(gradeNum) {
+            currentGrade = gradeNum;
+            hideAllScreens();
+            document.getElementById("screen-classes").classList.remove("hidden");
+            document.getElementById("grade-title").textContent = gradeNum === 1 ? "فصول الصف الأول" : "فصول الصف الثاني";
+            renderClassesList();
+        };
+
+        window.backToClasses = function() {
+            openGrade(currentGrade);
+        };
+
+        function renderClassesList() {
+            const container = document.getElementById("classes-list");
+            container.innerHTML = "";
+            for (let i = 1; i <= 8; i++) {
+                const key = `${currentGrade}-${i}`;
+                const clsObj = appState[key];
+                const namedCount = clsObj.students.filter(s => s && s.trim()).length;
+                const btn = document.createElement("button");
+                btn.className = "w-full bg-white hover:bg-blue-50 active:scale-[0.99] border border-slate-200 rounded-2xl p-4 shadow-xs flex items-center justify-between transition";
+                btn.onclick = () => openClassAttendance(key);
+                btn.innerHTML = `
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-blue-900 text-amber-300 font-black text-lg flex items-center justify-center">
+                            ${formatClassArabic(key)}
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-base font-black text-slate-900">فصل (${formatClassArabic(key)})</span>
+                            <span class="text-xs font-bold text-slate-500">عدد الطلاب المسجلين: ${toArabicNum(namedCount)} طالب</span>
+                        </div>
+                    </div>
+                    <svg class="w-6 h-6 text-blue-800" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                `;
+                container.appendChild(btn);
+            }
+        }
+
+        function getTodayISO() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        function getStudentTotalAbsences(clsObj, idx) {
+            let total = 0;
+            Object.values(clsObj.absencesByDate || {}).forEach((arr) => {
+                if (Array.isArray(arr) && arr.includes(idx)) total += 1;
+            });
+            return total;
+        }
+
+        function updateTeacherUI() {
+            const saved = localStorage.getItem(TEACHER_KEY) || "";
+            const el = document.getElementById("teacher-name-display");
+            if (el) {
+                el.textContent = saved ? saved : "اضغط لتسجيل اسم المعلم";
+            }
+        }
+
+        window.openTeacherModal = function() {
+            document.getElementById("teacher-input").value = localStorage.getItem(TEACHER_KEY) || "";
+            document.getElementById("modal-teacher").classList.remove("hidden");
+        };
+
+        window.saveTeacherName = function() {
+            const val = document.getElementById("teacher-input").value.trim();
+            localStorage.setItem(TEACHER_KEY, val);
+            updateTeacherUI();
+            closeModal("modal-teacher");
+            showToast("تم حفظ اسم المعلم");
+        };
+
+        window.closeModal = function(id) {
+            document.getElementById(id).classList.add("hidden");
+        };
+
+        window.openClassAttendance = function(clsKey) {
+            currentClassKey = clsKey;
+            hideAllScreens();
+            document.getElementById("screen-attendance").classList.remove("hidden");
+            document.getElementById("current-class-title").textContent = formatClassArabic(clsKey);
+            const dateEl = document.getElementById("attendance-date");
+            if (!dateEl.value) dateEl.value = getTodayISO();
+            updateTeacherUI();
+            renderAttendanceScreen();
+        };
+
+        window.handleDateChange = function() {
+            renderAttendanceScreen();
+        };
+
+        function toggleStudentAbsent(idx, forceState = null) {
+            const dateStr = document.getElementById("attendance-date").value || getTodayISO();
+            const clsObj = appState[currentClassKey];
+            const set = new Set(clsObj.absencesByDate[dateStr] || []);
+            const isCurrentlyAbsent = set.has(idx);
+            const nextAbsent = forceState !== null ? forceState : !isCurrentlyAbsent;
+
+            if (nextAbsent) set.add(idx);
+            else set.delete(idx);
+
+            clsObj.absencesByDate[dateStr] = Array.from(set);
+            saveLocal();
+            renderAttendanceScreen();
+            if (window.cloudSync) window.cloudSync.saveClassToCloud(currentClassKey, clsObj);
+        }
+
+        function renderAttendanceScreen() {
+            const clsObj = appState[currentClassKey];
+            const dateStr = document.getElementById("attendance-date").value || getTodayISO();
+            const absentToday = new Set(clsObj.absencesByDate[dateStr] || []);
+            const listEl = document.getElementById("students-list");
+            listEl.innerHTML = "";
+
+            let namedCount = 0;
+            let absentCount = 0;
+
+            for (let i = 0; i < SLOTS_PER_CLASS; i++) {
+                const rawName = clsObj.students[i] || "";
+                const name = rawName.trim();
+                const isNamed = name.length > 0;
+                if (isNamed) namedCount += 1;
+
+                const isAbsent = absentToday.has(i);
+                if (isAbsent && isNamed) absentCount += 1;
+
+                const totalAbs = getStudentTotalAbsences(clsObj, i);
+
+                const card = document.createElement("div");
+                card.className = `rounded-2xl border p-3 flex items-center justify-between gap-2 shadow-xs transition ${
+                    isAbsent ? "bg-red-50 border-red-300" : "bg-white border-slate-200"
+                }`;
+
+                const infoDiv = document.createElement("div");
+                infoDiv.className = "flex items-center gap-2.5 min-w-0 flex-1";
+
+                const badgeNum = document.createElement("span");
+                badgeNum.className = "w-7 h-7 rounded-xl bg-slate-100 text-slate-800 font-black text-xs flex items-center justify-center shrink-0";
+                badgeNum.textContent = toArabicNum(i + 1);
+
+                const textWrap = document.createElement("div");
+                textWrap.className = "min-w-0 flex-1";
+
+                const nameEl = document.createElement("div");
+                nameEl.className = `text-sm font-extrabold truncate ${isNamed ? "text-slate-900" : "text-slate-400 italic"}`;
+                nameEl.textContent = isNamed ? name : `خانة رقم ${i + 1} (فارغة)`;
+
+                const counterEl = document.createElement("div");
+                counterEl.className = "text-[11px] font-bold text-slate-500 mt-0.5";
+                counterEl.textContent = `إجمالي الغياب: ${toArabicNum(totalAbs)} يوم`;
+
+                textWrap.appendChild(nameEl);
+                textWrap.appendChild(counterEl);
+                infoDiv.appendChild(badgeNum);
+                infoDiv.appendChild(textWrap);
+
+                const actionsDiv = document.createElement("div");
+                actionsDiv.className = "flex items-center gap-1.5 shrink-0";
+
+                const editBtn = document.createElement("button");
+                editBtn.type = "button";
+                editBtn.title = "تعديل اسم الطالب";
+                editBtn.className = "bg-blue-50 hover:bg-blue-100 text-blue-700 p-2 rounded-xl border border-blue-200 transition";
+                editBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>`;
+                editBtn.onclick = () => openEditStudentModal(i);
+
+                const delBtn = document.createElement("button");
+                delBtn.type = "button";
+                delBtn.title = "حذف الطالب";
+                delBtn.className = "bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-xl border border-red-200 transition";
+                delBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+                delBtn.onclick = () => openDeleteStudentModal(i);
+
+                const sw = document.createElement("div");
+                sw.className = `swipe-switch ${isAbsent ? "absent" : ""}`;
+                sw.innerHTML = `
+                    <span class="switch-label-present">حاضر</span>
+                    <span class="switch-label-absent">غائب</span>
+                    <div class="swipe-knob"></div>
+                `;
+
+                let startX = null;
+                sw.addEventListener("touchstart", (e) => {
+                    startX = e.touches[0].clientX;
+                }, { passive: true });
+
+                sw.addEventListener("touchend", (e) => {
+                    if (startX === null) return;
+                    const diffX = e.changedTouches[0].clientX - startX;
+                    startX = null;
+                    if (diffX < -18) {
+                        toggleStudentAbsent(i, true);
+                    } else if (diffX > 18) {
+                        toggleStudentAbsent(i, false);
+                    } else {
+                        toggleStudentAbsent(i);
+                    }
+                });
+
+                sw.addEventListener("click", (e) => {
+                    if (e.detail === 0) return;
+                    toggleStudentAbsent(i);
+                });
+
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(delBtn);
+                actionsDiv.appendChild(sw);
+
+                card.appendChild(infoDiv);
+                card.appendChild(actionsDiv);
+                listEl.appendChild(card);
+            }
+
+            document.getElementById("stat-total").textContent = `${toArabicNum(namedCount)} / ٦٠`;
+            document.getElementById("stat-present").textContent = toArabicNum(Math.max(0, namedCount - absentCount));
+            document.getElementById("stat-absent").textContent = toArabicNum(absentCount);
+        }
+
+        window.openAddStudentModal = function() {
+            const clsObj = appState[currentClassKey];
+            const emptyIdx = clsObj.students.findIndex(s => !s || !s.trim());
+            if (emptyIdx === -1) {
+                showToast("الحد الأقصى للفصل ٦٠ طالباً");
+                return;
+            }
+            studentModalMode = "add";
+            editingStudentIndex = emptyIdx;
+            document.getElementById("student-modal-title").textContent = "إضافة طالب جديد";
+            document.getElementById("student-name-input").value = "";
+            document.getElementById("modal-student").classList.remove("hidden");
+        };
+
+        window.openEditStudentModal = function(idx) {
+            studentModalMode = "edit";
+            editingStudentIndex = idx;
+            document.getElementById("student-modal-title").textContent = `تعديل اسم الطالب (رقم ${toArabicNum(idx + 1)})`;
+            document.getElementById("student-name-input").value = appState[currentClassKey].students[idx] || "";
+            document.getElementById("modal-student").classList.remove("hidden");
+        };
+
+        window.confirmStudentModal = function() {
+            const val = document.getElementById("student-name-input").value.trim();
+            if (!val) {
+                showToast("يرجى إدخال اسم الطالب");
+                return;
+            }
+            appState[currentClassKey].students[editingStudentIndex] = val;
+            saveLocal();
+            closeModal("modal-student");
+            renderAttendanceScreen();
+            if (window.cloudSync) window.cloudSync.saveClassToCloud(currentClassKey, appState[currentClassKey]);
+            showToast(studentModalMode === "add" ? "تمت إضافة الطالب" : "تم تعديل اسم الطالب");
+        };
+
+        window.openDeleteStudentModal = function(idx) {
+            pendingDeleteIndex = idx;
+            const name = appState[currentClassKey].students[idx] || `الطالب رقم ${idx + 1}`;
+            document.getElementById("delete-student-message").textContent =
+                `هل أنت متأكد من حذف "${name}" وإعادة ترقيم باقي الطلاب تسلسلياً وتحديث سجلات الغياب؟`;
+            document.getElementById("modal-delete-student").classList.remove("hidden");
+        };
+
+        window.confirmDeleteStudent = function() {
+            if (pendingDeleteIndex === null) return;
+            const idx = pendingDeleteIndex;
+            const clsObj = appState[currentClassKey];
+
+            clsObj.students.splice(idx, 1);
+            clsObj.students.push("");
+
+            const nextAbsByDate = {};
+            Object.entries(clsObj.absencesByDate || {}).forEach(([dt, arr]) => {
+                const updated = [];
+                (arr || []).forEach((oldIdx) => {
+                    if (oldIdx < idx) updated.push(oldIdx);
+                    else if (oldIdx > idx) updated.push(oldIdx - 1);
+                });
+                nextAbsByDate[dt] = updated;
+            });
+            clsObj.absencesByDate = nextAbsByDate;
+
+            pendingDeleteIndex = null;
+            saveLocal();
+            closeModal("modal-delete-student");
+            renderAttendanceScreen();
+            if (window.cloudSync) window.cloudSync.saveClassToCloud(currentClassKey, clsObj);
+            showToast("تم الحذف وإعادة الترقيم تلقائياً");
+        };
+
+        window.openResetModal = function() {
+            document.getElementById("modal-reset").classList.remove("hidden");
+        };
+
+        window.resetCurrentClassToDefault = function() {
+            const defArr = (DEFAULT_CLASSES[currentClassKey] || []).slice(0, SLOTS_PER_CLASS);
+            while (defArr.length < SLOTS_PER_CLASS) defArr.push("");
+            appState[currentClassKey] = {
+                students: defArr,
+                absencesByDate: {}
+            };
+            saveLocal();
+            closeModal("modal-reset");
+            renderAttendanceScreen();
+            if (window.cloudSync) window.cloudSync.saveClassToCloud(currentClassKey, appState[currentClassKey]);
+            showToast("تمت استعادة القائمة الأصلية للفصل");
+        };
+
+        window.saveAttendanceData = async function() {
+            saveLocal();
+            if (window.cloudSync) {
+                const ok = await window.cloudSync.saveClassToCloud(currentClassKey, appState[currentClassKey]);
+                showToast(ok ? "تم الحفظ والمزامنة مع السحابة" : "تم الحفظ محلياً");
+            } else {
+                showToast("تم الحفظ محلياً");
+            }
+        };
+
+        window.openAdminDashboard = function() {
+            hideAllScreens();
+            document.getElementById("screen-admin").classList.remove("hidden");
+            const adminDateEl = document.getElementById("admin-date");
+            if (!adminDateEl.value) {
+                adminDateEl.value = document.getElementById("attendance-date").value || getTodayISO();
+            }
+            renderAdminDashboard();
+        };
+
+        window.handleAdminDateChange = function() {
+            renderAdminDashboard();
+        };
+
+        function renderAdminDashboard() {
+            const dateStr = document.getElementById("admin-date").value || getTodayISO();
+            const summaryEl = document.getElementById("admin-classes-summary");
+            summaryEl.innerHTML = "";
+
+            let totalStudents = 0;
+            let totalAbsent = 0;
+            let g1Absent = 0;
+            let g2Absent = 0;
+
+            Object.keys(DEFAULT_CLASSES).forEach((key) => {
+                const clsObj = appState[key];
+                const namedIndices = [];
+                clsObj.students.forEach((s, i) => {
+                    if (s && s.trim()) namedIndices.push(i);
+                });
+                const absentSet = new Set(clsObj.absencesByDate[dateStr] || []);
+                const clsAbsentCount = namedIndices.filter(i => absentSet.has(i)).length;
+
+                totalStudents += namedIndices.length;
+                totalAbsent += clsAbsentCount;
+                if (key.startsWith("1-")) g1Absent += clsAbsentCount;
+                if (key.startsWith("2-")) g2Absent += clsAbsentCount;
+
+                const row = document.createElement("div");
+                row.className = "bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between shadow-xs";
+                row.innerHTML = `
+                    <div>
+                        <span class="font-black text-slate-900 text-sm">فصل (${formatClassArabic(key)})</span>
+                        <span class="block text-xs text-slate-500 font-bold">المقيدون: ${toArabicNum(namedIndices.length)} طالب</span>
+                    </div>
+                    <div class="bg-red-50 text-red-700 border border-red-200 px-3 py-1 rounded-xl text-xs font-black">
+                        غائب اليوم: ${toArabicNum(clsAbsentCount)}
+                    </div>
+                `;
+                summaryEl.appendChild(row);
+            });
+
+            document.getElementById("admin-total-students").textContent = toArabicNum(totalStudents);
+            document.getElementById("admin-total-absent").textContent = toArabicNum(totalAbsent);
+            document.getElementById("admin-g1-absent").textContent = toArabicNum(g1Absent);
+            document.getElementById("admin-g2-absent").textContent = toArabicNum(g2Absent);
+        }
+
+        window.openExportModal = function() {
+            document.getElementById("modal-export").classList.remove("hidden");
+        };
+
+        window.exportClassExcel = function(mode) {
+            const clsObj = appState[currentClassKey];
+            const dateStr = document.getElementById("attendance-date").value || getTodayISO();
+            const teacher = localStorage.getItem(TEACHER_KEY) || "غير محدد";
+            const absentToday = new Set(clsObj.absencesByDate[dateStr] || []);
+
+            const rows = [];
+            clsObj.students.forEach((rawName, i) => {
+                const name = (rawName || "").trim();
+                if (!name) return;
+                const totalAbs = getStudentTotalAbsences(clsObj, i);
+                if (mode === "daily") {
+                    rows.push({
+                        "م": i + 1,
+                        "الفصل": currentClassKey,
+                        "اسم الطالب": name,
+                        "التاريخ": dateStr,
+                        "حالة اليوم": absentToday.has(i) ? "غائب" : "حاضر",
+                        "إجمالي أيام الغياب": totalAbs,
+                        "المعلم المسؤول": teacher
+                    });
+                } else {
+                    rows.push({
+                        "م": i + 1,
+                        "الفصل": currentClassKey,
+                        "اسم الطالب": name,
+                        "إجمالي أيام الغياب": totalAbs,
+                        "المعلم المسؤول": teacher
+                    });
+                }
+            });
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, `فصل_${currentClassKey}`);
+            const suffix = mode === "daily" ? dateStr : "تراكمي";
+            XLSX.writeFile(wb, `غياب_كفر_المنصورة_${currentClassKey}_${suffix}.xlsx`);
+            closeModal("modal-export");
+            showToast("تم تنزيل ملف Excel");
+        };
+
+        window.exportSchoolExcel = function() {
+            const dateStr = document.getElementById("admin-date").value || getTodayISO();
+            const teacher = localStorage.getItem(TEACHER_KEY) || "غير محدد";
+            const rows = [];
+
+            Object.keys(DEFAULT_CLASSES).forEach((key) => {
+                const clsObj = appState[key];
+                const absentToday = new Set(clsObj.absencesByDate[dateStr] || []);
+                clsObj.students.forEach((rawName, i) => {
+                    const name = (rawName || "").trim();
+                    if (!name) return;
+                    rows.push({
+                        "الفصل": key,
+                        "م": i + 1,
+                        "اسم الطالب": name,
+                        "التاريخ": dateStr,
+                        "حالة اليوم": absentToday.has(i) ? "غائب" : "حاضر",
+                        "إجمالي أيام الغياب": getStudentTotalAbsences(clsObj, i),
+                        "المعلم المسؤول": teacher
+                    });
+                });
+            });
+
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "تقرير_المدرسة");
+            XLSX.writeFile(wb, `تقرير_غياب_مدرسة_كفر_المنصورة_${dateStr}.xlsx`);
+            showToast("تم تنزيل التقرير الشامل للمدرسة");
+        };
+
+        window.openShareModal = function() {
+            document.getElementById("share-link-input").value = window.location.href;
+            document.getElementById("modal-share").classList.remove("hidden");
+        };
+
+        window.copyShareLink = function() {
+            const inp = document.getElementById("share-link-input");
+            inp.select();
+            navigator.clipboard?.writeText(inp.value).catch(() => {});
+            showToast("تم نسخ الرابط");
+        };
+
+        document.getElementById("attendance-date").value = getTodayISO();
+        document.getElementById("admin-date").value = getTodayISO();
+        updateTeacherUI();
+    </script>
+</body>
+</html>
